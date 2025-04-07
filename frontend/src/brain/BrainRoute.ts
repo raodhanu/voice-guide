@@ -1,4 +1,12 @@
-import { CheckHealthData, DubaiQueryRequest, ProcessDubaiQueryData, StreamDubaiResponseData } from "./data-contracts";
+import {
+  CheckHealthData,
+  DubaiQueryRequest,
+  GetGoogleMapsApiKeyData,
+  LocationQueryRequest,
+  ProcessDubaiQueryData,
+  QueryLocationData,
+  StreamDubaiResponseData,
+} from "./data-contracts";
 
 export namespace Brain {
   /**
@@ -43,5 +51,35 @@ export namespace Brain {
     export type RequestBody = DubaiQueryRequest;
     export type RequestHeaders = {};
     export type ResponseBody = StreamDubaiResponseData;
+  }
+
+  /**
+   * @description Process a location query and return relevant information
+   * @tags dbtn/module:dubai_locations
+   * @name query_location
+   * @summary Query Location
+   * @request POST:/routes/dubai-locations/query
+   */
+  export namespace query_location {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = LocationQueryRequest;
+    export type RequestHeaders = {};
+    export type ResponseBody = QueryLocationData;
+  }
+
+  /**
+   * @description Get the Google Maps API key. This endpoint should only be called from the frontend.
+   * @tags dbtn/module:google_maps
+   * @name get_google_maps_api_key
+   * @summary Get Google Maps Api Key
+   * @request GET:/routes/api-key
+   */
+  export namespace get_google_maps_api_key {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = never;
+    export type RequestHeaders = {};
+    export type ResponseBody = GetGoogleMapsApiKeyData;
   }
 }

@@ -24,6 +24,8 @@ export function LanguageSelector({
     { code: "zh-CN", name: "Chinese", flag: "🇨🇳" },
     { code: "ru-RU", name: "Russian", flag: "🇷🇺" },
     { code: "hi-IN", name: "Hindi", flag: "🇮🇳" },
+    { code: "es-ES", name: "Spanish", flag: "🇪🇸" },
+    { code: "de-DE", name: "German", flag: "🇩🇪" },
     { code: "fr-FR", name: "French", flag: "🇫🇷" },
   ];
 
@@ -44,6 +46,17 @@ export function LanguageSelector({
           </option>
         ))}
       </select>
+      
+      <div className="ml-2 text-xs text-gray-500">
+        {currentLanguage === "ar-AE" && "تحدث بالعربية"}
+        {currentLanguage === "zh-CN" && "用中文说话"}
+        {currentLanguage === "ru-RU" && "Говорите по-русски"}
+        {currentLanguage === "en-US" && "Speak in English"}
+        {currentLanguage === "hi-IN" && "हिंदी में बोलें"}
+        {currentLanguage === "es-ES" && "Habla en español"}
+        {currentLanguage === "de-DE" && "Sprechen Sie Deutsch"}
+        {currentLanguage === "fr-FR" && "Parlez en français"}
+      </div>
     </div>
   );
 }

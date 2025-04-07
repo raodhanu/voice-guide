@@ -93,7 +93,7 @@ export class SpeechRecognizer {
 
   /**
    * Set the language for speech recognition
-   * @param lang Language code (e.g., 'en-US', 'ar-AE', 'zh-CN', 'ru-RU')
+   * @param lang Language code (e.g., 'en-US', 'ar-AE', 'zh-CN', 'ru-RU', 'hi-IN', 'es-ES', 'de-DE', 'fr-FR')
    */
   public setLanguage(lang: string) {
     if (this.recognition) {

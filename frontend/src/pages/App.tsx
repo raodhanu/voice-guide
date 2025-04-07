@@ -4,6 +4,10 @@ import { FeatureCard } from "components/FeatureCard";
 import { TranscriptionDisplay } from "components/TranscriptionDisplay";
 import { AIResponseDisplay } from "components/AIResponseDisplay";
 import { LanguageSelector } from "components/LanguageSelector";
+import { LocationDisplay } from "components/LocationDisplay";
+import { ConversationHistory, ConversationEntry } from "components/ConversationHistory";
+import { CulturalEtiquetteDisplay } from "components/CulturalEtiquetteDisplay";
+import { speechSynthesizer } from "utils/speechSynthesis";
 import { speechRecognizer } from "utils/speechRecognition";
 import { toast } from "sonner";
 import brain from "brain";
@@ -66,9 +70,30 @@ export default function App() {
   const [aiResponse, setAiResponse] = useState("");
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [suggestedFollowups, setSuggestedFollowups] = useState<string[]>([]);
+  const [etiquetteInfo, setEtiquetteInfo] = useState<any>(null);
+  const [isEtiquetteLoading, setIsEtiquetteLoading] = useState(false);
   
-  // Language setting (for future multilingual support)
+  // Location data state
+  const [locationData, setLocationData] = useState<any>(null);
+  const [isLocationLoading, setIsLocationLoading] = useState(false);
+  
+  // Language setting
   const [language, setLanguage] = useState("en-US");
+  
+  // Conversation history
+  const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
+  
+  // Clear AI response data when language changes
+  const handleLanguageChange = (newLanguage: string) => {
+    setLanguage(newLanguage);
+    // Clear the AI response and transcription data when language changes
+    setAiResponse("");
+    setTranscript("");
+    setFinalTranscript("");
+    setSuggestedFollowups([]);
+    setEtiquetteInfo(null);
+    setLocationData(null);
+  };
   
   // Check if speech recognition is supported
   useEffect(() => {
@@ -90,6 +115,9 @@ export default function App() {
     if (isListening) {
       speechRecognizer.stopListening();
     } else {
+      // Set the language for speech recognition
+      speechRecognizer.setLanguage(language);
+      
       speechRecognizer.startListening({
         onStart: () => {
           setIsListening(true);
@@ -106,7 +134,19 @@ export default function App() {
             
             // Send the finalized transcript to the Dubai assistant API
             if (text.trim()) {
-              processQuery(text.trim());
+              const userQuery = text.trim();
+              
+              // Add user query to conversation history
+              const userEntry: ConversationEntry = {
+                id: Date.now().toString(),
+                type: "user",
+                text: userQuery,
+                timestamp: new Date(),
+                language: language
+              };
+              
+              setConversationHistory(prev => [...prev, userEntry]);
+              processQuery(userQuery);
             }
           }
         },
@@ -121,9 +161,76 @@ export default function App() {
     }
   }, [isListening, isSpeechSupported]);
   
+  // Determine if a query is asking about locations
+  const isLocationQuery = (query: string): boolean => {
+    // Simple heuristic check for location-related terms
+    const locationTerms = [
+      "where", "location", "address", "map", "show me", "find", 
+      "get to", "directions", "distance", "how far", "near", 
+      "burj", "dubai mall", "palm", "museum", "beach", "marina"
+    ];
+    const lowerQuery = query.toLowerCase();
+    return locationTerms.some(term => lowerQuery.includes(term));
+  };
+
+  // Replay audio response from conversation history
+  const handleReplayAudio = (text: string, entryLanguage: string) => {
+    // Get the default voice for the language of the entry
+    const voice = speechSynthesizer.getDefaultVoiceForLanguage(entryLanguage);
+    
+    // Adjust speech rate based on language
+    let rate = 1.0;
+    if (entryLanguage === 'ar-AE') {
+      rate = 0.9;
+    } else if (entryLanguage === 'zh-CN') {
+      rate = 0.85;
+    } else if (entryLanguage === 'ru-RU') {
+      rate = 0.95;
+    } else if (entryLanguage === 'hi-IN') {
+      rate = 0.9; // Slightly slower for Hindi
+    } else if (entryLanguage === 'es-ES') {
+      rate = 0.95; // Slightly slower for Spanish
+    } else if (entryLanguage === 'de-DE') {
+      rate = 1.0; // Normal rate for German
+    } else if (entryLanguage === 'fr-FR') {
+      rate = 0.95; // Slightly slower for French
+    }
+    
+    speechSynthesizer.speak({
+      text: text,
+      lang: entryLanguage,
+      voice: voice,
+      rate: rate,
+      onStart: () => {},
+      onEnd: () => {},
+      onError: (error) => console.error("Speech synthesis error:", error)
+    });
+  };
+  
   // Process query with Dubai assistant API
   const processQuery = async (query: string) => {
     setIsAiLoading(true);
+    setIsEtiquetteLoading(true);
+    
+    // Check if this is a location query
+    if (isLocationQuery(query)) {
+      setIsLocationLoading(true);
+      try {
+        // Process location query
+        const locationResponse = await brain.query_location({
+          query
+        });
+        const locationResult = await locationResponse.json();
+        setLocationData(locationResult);
+      } catch (error) {
+        console.error("Error processing location query:", error);
+        setLocationData(null);
+      } finally {
+        setIsLocationLoading(false);
+      }
+    }
+    
+    // Always process with the assistant API for the textual response
     try {
       // Use language code to send to API
       const response = await brain.process_dubai_query({ 
@@ -133,12 +240,31 @@ export default function App() {
       const data = await response.json();
       setAiResponse(data.answer);
       setSuggestedFollowups(data.suggested_followups || []);
+      
+      // Check if we have etiquette information
+      if (data.etiquette_info) {
+        setEtiquetteInfo(data.etiquette_info);
+      } else {
+        setEtiquetteInfo(null);
+      }
+      
+      // Add AI response to conversation history
+      const assistantEntry: ConversationEntry = {
+        id: Date.now().toString(),
+        type: "assistant",
+        text: data.answer,
+        timestamp: new Date(),
+        language: language
+      };
+      
+      setConversationHistory(prev => [...prev, assistantEntry]);
     } catch (error) {
       console.error("Error processing query:", error);
       toast.error("Failed to get response from the assistant");
       setAiResponse("I'm sorry, I couldn't process your request at the moment. Please try again later.");
     } finally {
       setIsAiLoading(false);
+      setIsEtiquetteLoading(false);
     }
   };
   
@@ -149,6 +275,17 @@ export default function App() {
       const newText = prev ? `${prev}\n${followup}` : followup;
       return newText;
     });
+    
+    // Add user followup to conversation history
+    const userEntry: ConversationEntry = {
+      id: Date.now().toString(),
+      type: "user",
+      text: followup,
+      timestamp: new Date(),
+      language: language
+    };
+    
+    setConversationHistory(prev => [...prev, userEntry]);
     
     // Process the followup query
     processQuery(followup);
@@ -191,10 +328,30 @@ export default function App() {
             </button>
             
             <div className="mt-8 flex justify-center space-x-2">
-              <span className="px-3 py-1 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">English</span>
-              <span className="px-3 py-1 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">Arabic</span>
-              <span className="px-3 py-1 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">Chinese</span>
-              <span className="px-3 py-1 text-xs rounded-full bg-white/20 text-white backdrop-blur-sm">Russian</span>
+              <button 
+                onClick={() => handleLanguageChange("en-US")} 
+                className={`px-3 py-1 text-xs rounded-full ${language === "en-US" ? "bg-primary text-white" : "bg-white/20 text-white"} backdrop-blur-sm transition-colors duration-200`}
+              >
+                English
+              </button>
+              <button 
+                onClick={() => handleLanguageChange("ar-AE")} 
+                className={`px-3 py-1 text-xs rounded-full ${language === "ar-AE" ? "bg-primary text-white" : "bg-white/20 text-white"} backdrop-blur-sm transition-colors duration-200`}
+              >
+                Arabic
+              </button>
+              <button 
+                onClick={() => handleLanguageChange("zh-CN")} 
+                className={`px-3 py-1 text-xs rounded-full ${language === "zh-CN" ? "bg-primary text-white" : "bg-white/20 text-white"} backdrop-blur-sm transition-colors duration-200`}
+              >
+                Chinese
+              </button>
+              <button 
+                onClick={() => handleLanguageChange("ru-RU")} 
+                className={`px-3 py-1 text-xs rounded-full ${language === "ru-RU" ? "bg-primary text-white" : "bg-white/20 text-white"} backdrop-blur-sm transition-colors duration-200`}
+              >
+                Russian
+              </button>
             </div>
           </div>
         </div>
@@ -212,7 +369,7 @@ export default function App() {
         <div className="container mx-auto max-w-4xl mb-6 flex justify-end">
           <LanguageSelector 
             currentLanguage={language} 
-            onLanguageChange={setLanguage} 
+            onLanguageChange={handleLanguageChange} 
           />
         </div>
         <div className="container mx-auto max-w-4xl grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -221,6 +378,7 @@ export default function App() {
             isListening={isListening} 
             finalTranscript={finalTranscript} 
             className="h-full"
+            language={language}
           />
           
           <AIResponseDisplay
@@ -232,6 +390,42 @@ export default function App() {
             language={language}
           />
         </div>
+        
+        {/* Map display section */}
+        {(locationData || isLocationLoading) && (
+          <div className="container mx-auto max-w-4xl mt-8">
+            <h2 className="text-2xl font-bold mb-4">Location Information</h2>
+            <LocationDisplay 
+              locationData={locationData}
+              isLoading={isLocationLoading}
+              className="w-full" 
+            />
+          </div>
+        )}
+        
+        {/* Cultural Etiquette display section */}
+        {(etiquetteInfo || isEtiquetteLoading) && (
+          <div className="container mx-auto max-w-4xl mt-8">
+            <CulturalEtiquetteDisplay
+              etiquetteInfo={etiquetteInfo}
+              isLoading={isEtiquetteLoading}
+              className="w-full"
+              language={language}
+            />
+          </div>
+        )}
+        
+        {/* Conversation History Section */}
+        {conversationHistory.length > 0 && (
+          <div className="container mx-auto max-w-4xl mt-8">
+            <ConversationHistory 
+              entries={conversationHistory}
+              language={language}
+              onReplayAudio={handleReplayAudio}
+              className="w-full"
+            />
+          </div>
+        )}
       </section>
 
       {/* Features Section */}

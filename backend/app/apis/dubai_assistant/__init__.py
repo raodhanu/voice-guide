@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from openai import OpenAI
 import databutton as db
 
@@ -11,14 +11,70 @@ class DubaiQueryRequest(BaseModel):
     query: str = Field(..., description="The user's query about Dubai")
     language: str = Field("en", description="The language code for the response (e.g., 'en', 'ar', 'ru', 'zh')")
 
+class EtiquetteInfo(BaseModel):
+    category: str = Field(..., description="The category of etiquette information")
+    advice: str = Field(..., description="The main advice about this etiquette category")
+    additional_info: Optional[str] = Field(None, description="Additional information about the etiquette")
+    do_tips: Optional[List[str]] = Field(None, description="List of things to do")
+    dont_tips: Optional[List[str]] = Field(None, description="List of things not to do")
+
 class DubaiQueryResponse(BaseModel):
     answer: str = Field(..., description="The AI-generated answer about Dubai")
     suggested_followups: List[str] = Field(default_factory=list, description="Optional suggested follow-up questions")
+    etiquette_info: Optional[EtiquetteInfo] = Field(None, description="Cultural etiquette information if the query is about cultural customs")
+
+# Etiquette categories
+ETIQUETTE_CATEGORIES = [
+    "dress-code", "greetings", "religious-customs", "dining", 
+    "public-behavior", "business", "home-visits", "gender-interactions"
+]
+
+# Function to detect if a query is about cultural etiquette
+def is_etiquette_query(query: str) -> bool:
+    etiquette_terms = [
+        "etiquette", "custom", "tradition", "dress code", "clothing", 
+        "wear", "greet", "greeting", "handshake", "gesture", 
+        "nod", "bow", "religious", "islam", "mosque", "ramadan",
+        "dining", "eat", "food", "restaurant", "table manner",
+        "public", "behavior", "conduct", "appropriate", "acceptable",
+        "photo", "picture", "business", "meeting", "professional",
+        "card", "gift", "home", "visit", "house", "gender", "male", "female",
+        "prayer", "modest", "modesty", "rude", "polite", "offensive"
+    ]
+    
+    query_lower = query.lower()
+    return any(term in query_lower for term in etiquette_terms)
+
+# Function to detect which etiquette category a query belongs to
+def detect_etiquette_category(query: str) -> str:
+    query_lower = query.lower()
+    
+    # Category-specific keywords
+    category_patterns = {
+        "dress-code": ["dress", "wear", "clothes", "attire", "outfit", "modest", "clothing"],
+        "greetings": ["greet", "handshake", "hello", "salaam", "gesture", "wave", "bow"],
+        "religious-customs": ["mosque", "islam", "prayer", "ramadan", "religious", "faith", "holy"],
+        "dining": ["eat", "food", "dining", "restaurant", "meal", "breakfast", "lunch", "dinner", "table"],
+        "public-behavior": ["public", "behavior", "acceptable", "allowed", "illegal", "law", "rule", "pda"],
+        "business": ["business", "meeting", "professional", "office", "work", "colleague", "card"],
+        "home-visits": ["home", "house", "visit", "invitation", "invit", "guest", "host"],
+        "gender-interactions": ["gender", "man", "woman", "male", "female", "interaction", "touch"]
+    }
+    
+    # Check each category for matches
+    for category, keywords in category_patterns.items():
+        if any(keyword in query_lower for keyword in keywords):
+            return category
+    
+    # Default to public-behavior if no specific match found
+    return "public-behavior"
 
 # Dubai tourism information system prompt
 DUBAI_SYSTEM_PROMPT = """
 You are VoiceGuide, a multilingual voice navigation assistant for tourists in Dubai. 
 Your goal is to provide accurate, helpful, and culturally sensitive information about Dubai to help tourists have the best experience.
+
+You should respond in the language that the user has selected, which will be indicated in a separate instruction. Be natural and conversational, using appropriate cultural context for the language you're responding in.
 
 You can help with:
 
@@ -87,37 +143,130 @@ def process_dubai_query(request: DubaiQueryRequest) -> DubaiQueryResponse:
         client = get_openai_client()
         
         # Get user's preferred language
-        language = request.language.lower()
+        language_code = request.language.lower()
+        
+        # Extract primary language code (e.g., 'en' from 'en-US')
+        if '-' in language_code:
+            language = language_code.split('-')[0]
+        else:
+            language = language_code
         
         # Customize response language instruction based on user's preference
         language_instruction = ""
         if language == "en":
             language_instruction = "Respond in English."
         elif language == "ar":
-            language_instruction = "Respond in Arabic (العربية)."
+            language_instruction = "Respond in Arabic (العربية). Make sure all text is in proper Arabic."
         elif language == "zh":
-            language_instruction = "Respond in Chinese (简体中文)."
+            language_instruction = "Respond in simplified Chinese (简体中文). Make sure all text is in proper Chinese characters."
         elif language == "ru":
-            language_instruction = "Respond in Russian (русский)."
+            language_instruction = "Respond in Russian (русский). Make sure all text is in proper Cyrillic characters."
         elif language == "hi":
-            language_instruction = "Respond in Hindi (हिन्दी)."
+            language_instruction = "Respond in Hindi (हिन्दी). Make sure all text is in proper Hindi using Devanagari script."
+        elif language == "es":
+            language_instruction = "Respond in Spanish (Español). Make sure all text is in proper Spanish."
+        elif language == "de":
+            language_instruction = "Respond in German (Deutsch). Make sure all text is in proper German."
         elif language == "fr":
-            language_instruction = "Respond in French (Français)."
+            language_instruction = "Respond in French (Français). Make sure all text is in proper French."
         else:
             language_instruction = "Respond in English."
+        
+        # Check if this is a cultural etiquette query
+        is_etiquette = is_etiquette_query(request.query)
+        etiquette_category = detect_etiquette_category(request.query) if is_etiquette else None
+        
+        # Prepare specialized instructions for etiquette queries
+        specialized_instructions = ""
+        if is_etiquette:
+            specialized_instructions = f"""
+This is a question about CULTURAL ETIQUETTE in Dubai, specifically about {etiquette_category.replace('-', ' ')}.
+
+In addition to your regular answer, please provide the following structured information that I can extract:
+1. A clear, concise piece of advice about this specific etiquette category (1-2 sentences).
+2. 3-5 specific things tourists SHOULD DO regarding this etiquette.
+3. 3-5 specific things tourists SHOULD NOT DO regarding this etiquette.
+
+Format this at the end of your response like this:
+[ETIQUETTE_INFO]
+Category: {etiquette_category}
+Advice: (main advice here)
+Additional: (any additional context)
+Do:
+- (do item 1)
+- (do item 2)
+- (etc.)
+Dont:
+- (don't item 1)
+- (don't item 2)
+- (etc.)
+[/ETIQUETTE_INFO]
+"""
         
         # Generate a response using OpenAI
         completion = client.chat.completions.create(
             model="gpt-4o-mini",  # Using gpt-4o-mini for a good balance of quality and cost
             messages=[
-                {"role": "system", "content": DUBAI_SYSTEM_PROMPT + "\n\n" + language_instruction},
+                {"role": "system", "content": DUBAI_SYSTEM_PROMPT + "\n\n" + language_instruction + specialized_instructions},
                 {"role": "user", "content": request.query}
             ],
             temperature=0.7,
-            max_tokens=800,
+            max_tokens=1000,
         )
         
-        answer = completion.choices[0].message.content
+        full_response = completion.choices[0].message.content
+        
+        # Extract etiquette info if present
+        etiquette_info = None
+        answer = full_response
+        
+        if is_etiquette:
+            import re
+            etiquette_match = re.search(r'\[ETIQUETTE_INFO\]\s*(.+?)\s*\[\/ETIQUETTE_INFO\]', full_response, re.DOTALL)
+            
+            if etiquette_match:
+                etiquette_text = etiquette_match.group(1)
+                
+                # Remove the etiquette info block from the main answer
+                answer = full_response.replace(etiquette_match.group(0), '').strip()
+                
+                # Parse etiquette information
+                category_match = re.search(r'Category:\s*(.+?)\s*(?:\n|$)', etiquette_text)
+                advice_match = re.search(r'Advice:\s*(.+?)\s*(?:\n|$)', etiquette_text)
+                additional_match = re.search(r'Additional:\s*(.+?)\s*(?:\n|$)', etiquette_text)
+                
+                do_items = re.findall(r'Do:\s*(?:[-*•]\s*(.+?)\s*(?:\n|$))+', etiquette_text)
+                if not do_items:
+                    do_items = re.findall(r'(?<=Do:\s*\n)\s*[-*•]\s*(.+?)\s*(?:\n|$)', etiquette_text)
+                
+                dont_items = re.findall(r'Dont:\s*(?:[-*•]\s*(.+?)\s*(?:\n|$))+', etiquette_text)
+                if not dont_items:
+                    dont_items = re.findall(r'(?<=Dont:\s*\n)\s*[-*•]\s*(.+?)\s*(?:\n|$)', etiquette_text)
+                
+                # Create etiquette info object if basic fields are present
+                if category_match and advice_match:
+                    category = category_match.group(1).strip()
+                    advice = advice_match.group(1).strip()
+                    additional_info = additional_match.group(1).strip() if additional_match else None
+                    
+                    # Further process do/don't items if not properly extracted
+                    if not do_items:
+                        do_section = re.search(r'Do:\s*\n(.+?)(?:Dont:|\[|\/)', etiquette_text, re.DOTALL)
+                        if do_section:
+                            do_items = [item.strip().lstrip('-*•').strip() for item in do_section.group(1).strip().split('\n') if item.strip()]
+                    
+                    if not dont_items:
+                        dont_section = re.search(r'Dont:\s*\n(.+?)(?:\[|\/)', etiquette_text, re.DOTALL)
+                        if dont_section:
+                            dont_items = [item.strip().lstrip('-*•').strip() for item in dont_section.group(1).strip().split('\n') if item.strip()]
+                    
+                    etiquette_info = EtiquetteInfo(
+                        category=etiquette_category,
+                        advice=advice,
+                        additional_info=additional_info,
+                        do_tips=do_items if do_items else None,
+                        dont_tips=dont_items if dont_items else None
+                    )
         
         # Generate follow-up suggestions in a separate call
         followup_completion = client.chat.completions.create(
@@ -153,7 +302,8 @@ def process_dubai_query(request: DubaiQueryRequest) -> DubaiQueryResponse:
         
         return DubaiQueryResponse(
             answer=answer,
-            suggested_followups=suggested_followups[:3]  # Limit to 3 suggestions
+            suggested_followups=suggested_followups[:3],  # Limit to 3 suggestions
+            etiquette_info=etiquette_info
         )
     
     except Exception as e:
@@ -171,22 +321,32 @@ def stream_dubai_response(request: DubaiQueryRequest):
             client = get_openai_client()
             
             # Get user's preferred language
-            language = request.language.lower()
+            language_code = request.language.lower()
+            
+            # Extract primary language code (e.g., 'en' from 'en-US')
+            if '-' in language_code:
+                language = language_code.split('-')[0]
+            else:
+                language = language_code
             
             # Customize response language instruction based on user's preference
             language_instruction = ""
             if language == "en":
                 language_instruction = "Respond in English."
             elif language == "ar":
-                language_instruction = "Respond in Arabic (العربية)."
+                language_instruction = "Respond in Arabic (العربية). Make sure all text is in proper Arabic."
             elif language == "zh":
-                language_instruction = "Respond in Chinese (简体中文)."
+                language_instruction = "Respond in simplified Chinese (简体中文). Make sure all text is in proper Chinese characters."
             elif language == "ru":
-                language_instruction = "Respond in Russian (русский)."
+                language_instruction = "Respond in Russian (русский). Make sure all text is in proper Cyrillic characters."
             elif language == "hi":
-                language_instruction = "Respond in Hindi (हिन्दी)."
+                language_instruction = "Respond in Hindi (हिन्दी). Make sure all text is in proper Hindi using Devanagari script."
+            elif language == "es":
+                language_instruction = "Respond in Spanish (Español). Make sure all text is in proper Spanish."
+            elif language == "de":
+                language_instruction = "Respond in German (Deutsch). Make sure all text is in proper German."
             elif language == "fr":
-                language_instruction = "Respond in French (Français)."
+                language_instruction = "Respond in French (Français). Make sure all text is in proper French."
             else:
                 language_instruction = "Respond in English."
             

@@ -1,8 +1,12 @@
 import {
   CheckHealthData,
   DubaiQueryRequest,
+  GetGoogleMapsApiKeyData,
+  LocationQueryRequest,
   ProcessDubaiQueryData,
   ProcessDubaiQueryError,
+  QueryLocationData,
+  QueryLocationError,
   StreamDubaiResponseData,
   StreamDubaiResponseError,
 } from "./data-contracts";
@@ -54,6 +58,38 @@ export class Brain<SecurityDataType = unknown> extends HttpClient<SecurityDataTy
       method: "POST",
       body: data,
       type: ContentType.Json,
+      ...params,
+    });
+
+  /**
+   * @description Process a location query and return relevant information
+   *
+   * @tags dbtn/module:dubai_locations
+   * @name query_location
+   * @summary Query Location
+   * @request POST:/routes/dubai-locations/query
+   */
+  query_location = (data: LocationQueryRequest, params: RequestParams = {}) =>
+    this.request<QueryLocationData, QueryLocationError>({
+      path: `/routes/dubai-locations/query`,
+      method: "POST",
+      body: data,
+      type: ContentType.Json,
+      ...params,
+    });
+
+  /**
+   * @description Get the Google Maps API key. This endpoint should only be called from the frontend.
+   *
+   * @tags dbtn/module:google_maps
+   * @name get_google_maps_api_key
+   * @summary Get Google Maps Api Key
+   * @request GET:/routes/api-key
+   */
+  get_google_maps_api_key = (params: RequestParams = {}) =>
+    this.request<GetGoogleMapsApiKeyData, any>({
+      path: `/routes/api-key`,
+      method: "GET",
       ...params,
     });
 }
