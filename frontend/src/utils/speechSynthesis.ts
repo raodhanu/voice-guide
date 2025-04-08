@@ -154,9 +154,13 @@ export class SpeechSynthesizer {
    * Stop speech
    */
   public stop(): void {
-    this.synthesis.cancel();
-    this.isSpeaking = false;
-    this.isPaused = false;
+    try {
+      this.synthesis.cancel();
+      this.isSpeaking = false;
+      this.isPaused = false;
+    } catch (error) {
+      console.error('Error cancelling speech synthesis:', error);
+    }
   }
   
   /**

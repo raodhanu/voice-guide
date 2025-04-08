@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 import { Toaster } from "sonner";
+// Import fix
+import { ThemeProvider } from "./Themeprovider";
 
 interface Props {
   children: ReactNode;
@@ -13,9 +15,9 @@ interface Props {
  */
 export const AppProvider = ({ children }: Props) => {
   return (
-    <>
+    <ThemeProvider attribute="class" defaultTheme="light">
       {children}
       <Toaster position="top-right" richColors />
-    </>
+    </ThemeProvider>
   );
 };

@@ -1,6 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef } from "react";
-import { GoogleMap as ReactGoogleMap, useLoadScript, Marker, InfoWindow, DirectionsRenderer } from "@react-google-maps/api";
+import { GoogleMap as ReactGoogleMap, useLoadScript, Marker, InfoWindow } from "@react-google-maps/api";
 import { getGoogleMapsApiKey, mapLibraries, DUBAI_CENTER } from "utils/maps";
+
+export interface DirectionsOptions {
+  /** Origin of the route */
+
+  origin: { location: { lat: number; lng: number }; name: string };
+  destination: { location: { lat: number; lng: number }; name: string };
+  /** Travel mode for directions - defaults to DRIVING */
+  travelMode?: google.maps.TravelMode;
+}
 
 export interface Place {
   id: string;
@@ -17,6 +26,7 @@ interface Props {
   places?: Place[];
   selectedPlaceId?: string;
   directions?: google.maps.DirectionsResult | null;
+  directionsOptions?: DirectionsOptions;
   onPlaceSelect?: (place: Place) => void;
   className?: string;
 }
@@ -24,7 +34,7 @@ interface Props {
 // This component handles displaying a loading state when the map isn't ready
 function MapLoadingState({ className }: { className?: string }) {
   return (
-    <div className={`w-full h-full flex items-center justify-center rounded-xl bg-gray-100 ${className}`}>
+    <div className={`w-full h-full flex items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 ${className}`}>
       <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
     </div>
   );
@@ -63,6 +73,8 @@ function LoadedGoogleMap({
       }
     }
   }, [selectedPlaceId, places]);
+  
+  // Directions functionality is disabled
 
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: apiKey,
@@ -76,6 +88,10 @@ function LoadedGoogleMap({
     }
     return zoom;
   }, [directions, zoom]);
+  
+  // Directions functionality is disabled
+  
+  // Directions functionality is disabled
 
   const mapOptions = useMemo(() => ({
     disableDefaultUI: false,
@@ -106,7 +122,8 @@ function LoadedGoogleMap({
   }), []);
 
   if (loadError) {
-    return <MapErrorState className={className} />;
+    console.error("Google Maps load error:", loadError);
+    return <MapErrorState className={className} errorMessage={loadError.message} />;
   }
 
   if (!isLoaded) {
@@ -166,8 +183,7 @@ function LoadedGoogleMap({
         </InfoWindow>
       )}
 
-      {/* Render directions if available */}
-      {directions && <DirectionsRenderer directions={directions} />}
+      {/* Directions functionality is disabled */}
     </ReactGoogleMap>
   );
 }

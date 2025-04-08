@@ -17,6 +17,16 @@ export interface DirectionsInfoType {
   steps: string[];
 }
 
+export enum TravelMode {
+  DRIVING = "DRIVING",
+  TRANSIT = "TRANSIT",
+  WALKING = "WALKING"
+}
+
+export interface MapSettings {
+  travelMode: TravelMode;
+}
+
 export interface LocationQueryResponseType {
   locations: LocationType[];
   primary_location?: string;
