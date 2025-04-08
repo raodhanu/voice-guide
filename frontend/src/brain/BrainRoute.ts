@@ -24,7 +24,7 @@ export namespace Brain {
   }
 
   /**
-   * @description Process a user query about Dubai and return relevant information
+   * No description
    * @tags dbtn/module:dubai_assistant
    * @name process_dubai_query
    * @summary Process Dubai Query
@@ -54,22 +54,7 @@ export namespace Brain {
   }
 
   /**
-   * @description Process a location query and return relevant information
-   * @tags dbtn/module:dubai_locations
-   * @name query_location
-   * @summary Query Location
-   * @request POST:/routes/dubai-locations/query
-   */
-  export namespace query_location {
-    export type RequestParams = {};
-    export type RequestQuery = {};
-    export type RequestBody = LocationQueryRequest;
-    export type RequestHeaders = {};
-    export type ResponseBody = QueryLocationData;
-  }
-
-  /**
-   * @description Get the Google Maps API key. This endpoint should only be called from the frontend.
+   * No description
    * @tags dbtn/module:google_maps
    * @name get_google_maps_api_key
    * @summary Get Google Maps Api Key
@@ -81,5 +66,20 @@ export namespace Brain {
     export type RequestBody = never;
     export type RequestHeaders = {};
     export type ResponseBody = GetGoogleMapsApiKeyData;
+  }
+
+  /**
+   * No description
+   * @tags dbtn/module:dubai_locations
+   * @name query_location
+   * @summary Query Location
+   * @request POST:/routes/dubai-locations/query
+   */
+  export namespace query_location {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = LocationQueryRequest;
+    export type RequestHeaders = {};
+    export type ResponseBody = QueryLocationData;
   }
 }

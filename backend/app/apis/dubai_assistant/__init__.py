@@ -1,10 +1,19 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 from openai import OpenAI
 import databutton as db
 
 router = APIRouter(prefix="/dubai-assistant")
+
+# Define CORS headers
+def add_cors_headers(response: Response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token"
+    return response
 
 # Pydantic models for request and response
 class DubaiQueryRequest(BaseModel):
@@ -135,7 +144,9 @@ def get_openai_client():
         raise HTTPException(status_code=500, detail=f"Error initializing OpenAI client: {str(e)}")
 
 @router.post("/query", response_model=DubaiQueryResponse)
-def process_dubai_query(request: DubaiQueryRequest) -> DubaiQueryResponse:
+def process_dubai_query(request: DubaiQueryRequest, response: Response) -> DubaiQueryResponse:
+    # Add CORS headers
+    add_cors_headers(response)
     """
     Process a user query about Dubai and return relevant information
     """
@@ -310,11 +321,14 @@ Dont:
         raise HTTPException(status_code=500, detail=f"Error processing query: {str(e)}")
 
 @router.post("/stream", tags=["stream"])
-def stream_dubai_response(request: DubaiQueryRequest):
+def stream_dubai_response(request: DubaiQueryRequest, response: Response):
     """
     Stream a response to a Dubai query for a more interactive experience
     """
     from fastapi.responses import StreamingResponse
+    
+    # Add CORS headers
+    add_cors_headers(response)
     
     def generate_response():
         try:

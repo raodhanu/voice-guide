@@ -28,7 +28,7 @@ export class Brain<SecurityDataType = unknown> extends HttpClient<SecurityDataTy
     });
 
   /**
-   * @description Process a user query about Dubai and return relevant information
+   * No description
    *
    * @tags dbtn/module:dubai_assistant
    * @name process_dubai_query
@@ -62,7 +62,22 @@ export class Brain<SecurityDataType = unknown> extends HttpClient<SecurityDataTy
     });
 
   /**
-   * @description Process a location query and return relevant information
+   * No description
+   *
+   * @tags dbtn/module:google_maps
+   * @name get_google_maps_api_key
+   * @summary Get Google Maps Api Key
+   * @request GET:/routes/api-key
+   */
+  get_google_maps_api_key = (params: RequestParams = {}) =>
+    this.request<GetGoogleMapsApiKeyData, any>({
+      path: `/routes/api-key`,
+      method: "GET",
+      ...params,
+    });
+
+  /**
+   * No description
    *
    * @tags dbtn/module:dubai_locations
    * @name query_location
@@ -75,21 +90,6 @@ export class Brain<SecurityDataType = unknown> extends HttpClient<SecurityDataTy
       method: "POST",
       body: data,
       type: ContentType.Json,
-      ...params,
-    });
-
-  /**
-   * @description Get the Google Maps API key. This endpoint should only be called from the frontend.
-   *
-   * @tags dbtn/module:google_maps
-   * @name get_google_maps_api_key
-   * @summary Get Google Maps Api Key
-   * @request GET:/routes/api-key
-   */
-  get_google_maps_api_key = (params: RequestParams = {}) =>
-    this.request<GetGoogleMapsApiKeyData, any>({
-      path: `/routes/api-key`,
-      method: "GET",
       ...params,
     });
 }

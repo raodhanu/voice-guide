@@ -1,10 +1,18 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional, Any
 import databutton as db
 import json
 
 router = APIRouter(prefix="/dubai-locations")
+
+# Define CORS headers
+def add_cors_headers(response: Response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    response.headers["Access-Control-Allow-Headers"] = "Accept, Content-Type, Content-Length, Accept-Encoding, Authorization, X-CSRF-Token"
+    return response
 
 # Pydantic models for request and response
 class LocationQueryRequest(BaseModel):
@@ -237,7 +245,9 @@ def generate_directions(origin_id: str, destination_id: str) -> DirectionsInfo:
     )
 
 @router.post("/query", response_model=LocationQueryResponse)
-async def query_location(request: LocationQueryRequest) -> LocationQueryResponse:
+async def query_location(request: LocationQueryRequest, response: Response) -> LocationQueryResponse:
+    # Add CORS headers
+    add_cors_headers(response)
     """Process a location query and return relevant information"""
     try:
         # Process the query to identify locations
