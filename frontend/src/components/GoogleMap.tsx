@@ -25,7 +25,8 @@ interface Props {
   zoom?: number;
   places?: Place[];
   selectedPlaceId?: string;
-  directions?: google.maps.DirectionsResult | null;
+  // No longer using directions prop to avoid errors
+  // directions?: google.maps.DirectionsResult | null;
   directionsOptions?: DirectionsOptions;
   onPlaceSelect?: (place: Place) => void;
   className?: string;
@@ -42,9 +43,32 @@ function MapLoadingState({ className }: { className?: string }) {
 
 // This component handles displaying an error state
 function MapErrorState({ className, errorMessage = "Error loading maps" }: { className?: string; errorMessage?: string }) {
+  // Check specifically for RefererNotAllowedMapError
+  const isRefererError = errorMessage && errorMessage.includes("RefererNotAllowedMapError");
+  
   return (
-    <div className={`w-full h-full flex items-center justify-center rounded-xl bg-gray-100 ${className}`}>
-      <p className="text-red-500">{errorMessage}</p>
+    <div className={`w-full h-full flex flex-col items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800 ${className}`}>
+      <div className="bg-white dark:bg-gray-700 p-6 rounded-xl shadow-md max-w-md text-center">
+        <div className="mb-4 flex justify-center">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-amber-500">
+            <path d="M12 22C17.5 22 22 17.5 22 12C22 6.5 17.5 2 12 2C6.5 2 2 6.5 2 12C2 17.5 6.5 22 12 22Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
+            <path d="M12 8V13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"></path>
+            <path d="M11.9945 16H12.0035" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"></path>
+          </svg>
+        </div>
+        <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Sorry! Something went wrong.</h3>
+        <p className="text-gray-600 dark:text-gray-300 mb-4">
+          {isRefererError 
+            ? "This page didn't load Google Maps correctly because the API key is not authorized for this domain. See the JavaScript console for technical details." 
+            : errorMessage}
+        </p>
+        <div className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+          {isRefererError && (
+            <p>The API key needs to be configured to allow access from: <br />
+            <code className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono text-xs">https://sumanrao.databutton.app</code></p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -56,7 +80,7 @@ function LoadedGoogleMap({
   zoom = 11,
   places = [],
   selectedPlaceId,
-  directions = null,
+  // directions = null,
   onPlaceSelect,
   className = "",
 }: Props & { apiKey: string }) {
@@ -81,15 +105,10 @@ function LoadedGoogleMap({
     libraries: mapLibraries,
   });
 
-  // Calculate appropriate map zoom based on directions
+  // Calculate appropriate map zoom - simplified without directions
   const mapZoom = useMemo(() => {
-    if (directions) {
-      return 12; // Slightly zoomed out when showing directions
-    }
     return zoom;
-  }, [directions, zoom]);
-  
-  // Directions functionality is disabled
+  }, [zoom]);
   
   // Directions functionality is disabled
 
@@ -122,7 +141,12 @@ function LoadedGoogleMap({
   }), []);
 
   if (loadError) {
+    // Log the error in detail
     console.error("Google Maps load error:", loadError);
+    // Handle RefererNotAllowedMapError more explicitly
+    if (loadError.message.includes("RefererNotAllowedMapError")) {
+      console.warn("Google Maps API key is not authorized for this domain. Please update API key restrictions in Google Cloud Console to include: https://sumanrao.databutton.app");
+    }
     return <MapErrorState className={className} errorMessage={loadError.message} />;
   }
 

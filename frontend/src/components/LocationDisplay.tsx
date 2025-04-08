@@ -28,10 +28,10 @@ export function LocationDisplay({ locationData, isLoading, className = "" }: Pro
   
   const [selectedPlace, setSelectedPlace] = useState<Place | null>(null);
   
-  // Directions functionality is disabled
+  // Completely remove directions functionality to avoid errors
   useEffect(() => {
     setDirectionOptions(null);
-  }, [locationData?.directions, travelMode]);
+  }, []);
 
   // Update selected place when primary location changes
   useEffect(() => {

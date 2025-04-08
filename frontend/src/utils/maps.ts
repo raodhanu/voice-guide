@@ -3,7 +3,7 @@
 import brain from "brain";
 
 // Define libraries array outside component to avoid performance warnings
-export const mapLibraries = ["places"];
+export const mapLibraries = ["places", "directions"];
 
 // Dubai center coordinates
 export const DUBAI_CENTER = { lat: 25.2048, lng: 55.2708 };
