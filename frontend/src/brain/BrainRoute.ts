@@ -55,21 +55,6 @@ export namespace Brain {
 
   /**
    * No description
-   * @tags dbtn/module:google_maps
-   * @name get_google_maps_api_key
-   * @summary Get Google Maps Api Key
-   * @request GET:/routes/api-key
-   */
-  export namespace get_google_maps_api_key {
-    export type RequestParams = {};
-    export type RequestQuery = {};
-    export type RequestBody = never;
-    export type RequestHeaders = {};
-    export type ResponseBody = GetGoogleMapsApiKeyData;
-  }
-
-  /**
-   * No description
    * @tags dbtn/module:dubai_locations
    * @name query_location
    * @summary Query Location
@@ -81,5 +66,20 @@ export namespace Brain {
     export type RequestBody = LocationQueryRequest;
     export type RequestHeaders = {};
     export type ResponseBody = QueryLocationData;
+  }
+
+  /**
+   * No description
+   * @tags dbtn/module:google_maps
+   * @name get_google_maps_api_key
+   * @summary Get Google Maps Api Key
+   * @request GET:/routes/api-key
+   */
+  export namespace get_google_maps_api_key {
+    export type RequestParams = {};
+    export type RequestQuery = {};
+    export type RequestBody = never;
+    export type RequestHeaders = {};
+    export type ResponseBody = GetGoogleMapsApiKeyData;
   }
 }

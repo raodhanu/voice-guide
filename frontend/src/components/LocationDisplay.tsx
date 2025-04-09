@@ -229,7 +229,7 @@ export function LocationDisplay({ locationData, isLoading, className = "" }: Pro
               </div>
             </div>
             
-            <p className="text-sm text-gray-600 leading-relaxed pl-11">{selectedPlace.description}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-300 leading-relaxed pl-11">{selectedPlace.description}</p>
           </div>
         )}
 
@@ -257,7 +257,7 @@ export function LocationDisplay({ locationData, isLoading, className = "" }: Pro
                 .map((place) => (
                   <button
                     key={place.id}
-                    className="text-left p-3 rounded-lg transition-all duration-300 text-sm relative overflow-hidden group bg-white/60 hover:bg-white/80 backdrop-blur-sm border border-amber-100/30 hover:border-amber-200/50 hover:shadow-sm"
+                    className="text-left p-3 rounded-lg transition-all duration-300 text-sm relative overflow-hidden group bg-white/60 dark:bg-gray-800/60 hover:bg-white/80 dark:hover:bg-gray-800/80 backdrop-blur-sm border border-amber-100/30 dark:border-amber-800/30 hover:border-amber-200/50 dark:hover:border-amber-700/50 hover:shadow-sm text-gray-700 dark:text-gray-200"
                     onClick={() => setSelectedPlace(place)}
                   >
                     {/* Arabic-inspired decorative corner element */}
@@ -267,7 +267,7 @@ export function LocationDisplay({ locationData, isLoading, className = "" }: Pro
                     
                     <div className="flex items-center">
                       <div className="w-4 h-4 rounded-full bg-amber-100/50 mr-2 group-hover:bg-amber-100 transition-colors duration-300 flex-shrink-0"></div>
-                      <span className="relative z-10 transition-colors duration-300 group-hover:text-gray-800">{place.name}</span>
+                      <span className="relative z-10 transition-colors duration-300 group-hover:text-gray-800 dark:group-hover:text-gray-200">{place.name}</span>
                     </div>
                     <span className="absolute inset-0 bg-gradient-to-r from-amber-100/0 via-white/30 to-amber-100/0 opacity-0 group-hover:opacity-100 transform -translate-x-full group-hover:translate-x-full transition-all duration-1000"></span>
                   </button>

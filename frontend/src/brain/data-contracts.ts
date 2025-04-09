@@ -151,8 +151,8 @@ export type StreamDubaiResponseData = any;
 
 export type StreamDubaiResponseError = HTTPValidationError;
 
-export type GetGoogleMapsApiKeyData = any;
-
 export type QueryLocationData = LocationQueryResponse;
 
 export type QueryLocationError = HTTPValidationError;
+
+export type GetGoogleMapsApiKeyData = any;

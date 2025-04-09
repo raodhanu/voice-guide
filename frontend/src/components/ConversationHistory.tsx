@@ -366,6 +366,32 @@ export function ConversationHistory({
                       
                       {/* Message content */}
                       <div className="prose prose-sm max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5">
+                        {/* Language indicator when different from UI language */}
+                        {entry.language && entry.language !== language && (
+                          <div className="flex items-center mb-2 py-1 px-2 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 w-fit">
+                            <span className="text-xs font-medium mr-1">
+                              {entry.language === "en-US" ? "🇺🇸" : 
+                               entry.language === "ar-AE" ? "🇦🇪" : 
+                               entry.language === "zh-CN" ? "🇨🇳" : 
+                               entry.language === "ru-RU" ? "🇷🇺" : 
+                               entry.language === "hi-IN" ? "🇮🇳" : 
+                               entry.language === "es-ES" ? "🇪🇸" : 
+                               entry.language === "de-DE" ? "🇩🇪" : 
+                               entry.language === "fr-FR" ? "🇫🇷" : ""}
+                            </span>
+                            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">
+                              {entry.language === "en-US" ? "English" : 
+                               entry.language === "ar-AE" ? "Arabic" : 
+                               entry.language === "zh-CN" ? "Chinese" : 
+                               entry.language === "ru-RU" ? "Russian" : 
+                               entry.language === "hi-IN" ? "Hindi" : 
+                               entry.language === "es-ES" ? "Spanish" : 
+                               entry.language === "de-DE" ? "German" : 
+                               entry.language === "fr-FR" ? "French" : 
+                               entry.language.split('-')[0].toUpperCase()}
+                            </span>
+                          </div>
+                        )}
                         <ReactMarkdown>{entry.text}</ReactMarkdown>
                       </div>
                       

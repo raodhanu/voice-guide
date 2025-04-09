@@ -85,15 +85,45 @@ export default function App() {
   // Conversation history
   const [conversationHistory, setConversationHistory] = useState<ConversationEntry[]>([]);
   
-  // Clear AI response data when language changes
+  // Handle language change with proper UI updates
   const handleLanguageChange = (newLanguage: string) => {
+    console.log(`Language changed from ${language} to ${newLanguage}`);
+    
+    // Update language state
     setLanguage(newLanguage);
+    
+    // Re-initialize speech recognizer with new language
+    if (speechRecognizer) {
+      speechRecognizer.setLanguage(newLanguage);
+    }
+    
+    // Re-initialize speech synthesizer preferences for new language
+    if (speechSynthesizer) {
+      // This ensures the default voice for the new language is selected
+      const voice = speechSynthesizer.getDefaultVoiceForLanguage(newLanguage);
+      console.log(`Set default voice for ${newLanguage}: ${voice?.name || 'No matching voice'}`); 
+    }
+    
     // Clear only temporary response data but keep conversation history and final transcript
     setAiResponse("");
     setTranscript("");
     setSuggestedFollowups([]);
     setEtiquetteInfo(null);
     setLocationData(null);
+    
+    // Display a toast notification about language change
+    let languageName = "English";
+    switch (newLanguage) {
+      case "ar-AE": languageName = "العربية"; break;
+      case "zh-CN": languageName = "中文"; break;
+      case "ru-RU": languageName = "Русский"; break;
+      case "hi-IN": languageName = "हिन्दी"; break;
+      case "es-ES": languageName = "Español"; break;
+      case "de-DE": languageName = "Deutsch"; break;
+      case "fr-FR": languageName = "Français"; break;
+    }
+    
+    toast.success(`Language changed to ${languageName}`);
     // Do NOT clear finalTranscript or conversationHistory here to preserve between language switches
   };
   
@@ -162,18 +192,19 @@ export default function App() {
             // Send the finalized transcript to the Dubai assistant API
             if (text.trim()) {
               const userQuery = text.trim();
+              const currentLanguage = language; // Capture current language at the time of input
               
-              // Add user query to conversation history
+              // Add user query to conversation history with current language
               const userEntry: ConversationEntry = {
                 id: Date.now().toString(),
                 type: "user",
                 text: userQuery,
                 timestamp: new Date(),
-                language: language
+                language: currentLanguage
               };
               
               setConversationHistory(prev => [...prev, userEntry]);
-              processQuery(userQuery);
+              processQuery(userQuery, currentLanguage); // Pass the current language to keep consistency
             }
           }
         },
@@ -186,7 +217,7 @@ export default function App() {
         }
       });
     }
-  }, [isListening, isSpeechSupported]);
+  }, [isListening, isSpeechSupported, language]); // Add language to dependency array
   
   // Determine if a query is asking about locations
   const isLocationQuery = (query: string): boolean => {
@@ -235,7 +266,10 @@ export default function App() {
   };
   
   // Process query with Dubai assistant API
-  const processQuery = async (query: string) => {
+  const processQuery = async (query: string, currentLanguage?: string) => {
+    // Use provided language or current language state
+    const queryLanguage = currentLanguage || language;
+    
     setIsAiLoading(true);
     setIsEtiquetteLoading(true);
     
@@ -259,10 +293,14 @@ export default function App() {
     
     // Always process with the assistant API for the textual response
     try {
+      // Extract primary language code (e.g., 'en' from 'en-US')
+      const primaryLanguageCode = queryLanguage.split('-')[0];
+      
       // Use language code to send to API
+      console.log(`Sending query in language: ${primaryLanguageCode}`);
       const response = await brain.process_dubai_query({ 
         query,
-        language: language.split('-')[0] // Extract primary language code (e.g., 'en' from 'en-US')
+        language: primaryLanguageCode
       });
       const data = await response.json();
       setAiResponse(data.answer);
@@ -275,13 +313,13 @@ export default function App() {
         setEtiquetteInfo(null);
       }
       
-      // Add AI response to conversation history
+      // Add AI response to conversation history with the language it was generated in
       const assistantEntry: ConversationEntry = {
         id: Date.now().toString(),
         type: "assistant",
         text: data.answer,
         timestamp: new Date(),
-        language: language
+        language: queryLanguage // Store the language this response was generated in
       };
       
       setConversationHistory(prev => [...prev, assistantEntry]);
@@ -303,19 +341,21 @@ export default function App() {
       return newText;
     });
     
-    // Add user followup to conversation history
+    const currentLanguage = language; // Capture current language at the time of click
+    
+    // Add user followup to conversation history with current language
     const userEntry: ConversationEntry = {
       id: Date.now().toString(),
       type: "user",
       text: followup,
       timestamp: new Date(),
-      language: language
+      language: currentLanguage
     };
     
     setConversationHistory(prev => [...prev, userEntry]);
     
-    // Process the followup query
-    processQuery(followup);
+    // Process the followup query with the current language
+    processQuery(followup, currentLanguage);
   };
   return (
     <>
@@ -406,11 +446,11 @@ export default function App() {
             <div className="flex flex-col items-center">
               <button 
                 onClick={toggleListening}
-                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-5 px-10 rounded-full flex items-center justify-center mx-auto transition-all duration-300 shadow-lg hover:shadow-xl group relative overflow-hidden backdrop-blur-sm mb-4`}
+                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-5 px-10 rounded-full flex items-center justify-center mx-auto transition-all duration-300 shadow-lg hover:shadow-xl group relative overflow-hidden backdrop-blur-sm mb-4 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white`}
                 disabled={!isSpeechSupported}
               >
                 <span className="absolute inset-0 w-full h-full bg-gradient-to-r from-white/0 via-white/20 to-white/0 transform -translate-x-full animate-shimmer"></span>
-                <div className={`w-12 h-12 rounded-full ${isListening ? 'bg-red-700' : 'bg-primary/80'} flex items-center justify-center mr-3 group-hover:mr-4 transition-all duration-300 shadow-inner`}>
+                <div className={`w-12 h-12 rounded-full ${isListening ? 'bg-red-700 dark:bg-red-800' : 'bg-primary/80 dark:bg-blue-900'} flex items-center justify-center mr-3 group-hover:mr-4 transition-all duration-300 shadow-inner`}>
                   <VoiceIcon size={28} isListening={isListening} />
                 </div>
                 <span className="text-lg font-semibold tracking-wide">
@@ -429,56 +469,56 @@ export default function App() {
                 <div className="absolute -bottom-1/4 -left-1/4 w-24 h-24 rounded-full bg-teal-100/20 filter blur-lg"></div>
                 <button 
                   onClick={() => handleLanguageChange("en-US")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "en-US" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "en-US" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇺🇸</span>
                   <span>English</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("ar-AE")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "ar-AE" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "ar-AE" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇦🇪</span>
                   <span>Arabic</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("zh-CN")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "zh-CN" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "zh-CN" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇨🇳</span>
                   <span>Chinese</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("ru-RU")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "ru-RU" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "ru-RU" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇷🇺</span>
                   <span>Russian</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("hi-IN")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "hi-IN" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "hi-IN" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇮🇳</span>
                   <span>Hindi</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("es-ES")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "es-ES" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "es-ES" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇪🇸</span>
                   <span>Spanish</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("de-DE")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "de-DE" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "de-DE" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇩🇪</span>
                   <span>German</span>
                 </button>
                 <button 
                   onClick={() => handleLanguageChange("fr-FR")} 
-                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "fr-FR" ? "bg-primary text-white ring ring-white/30" : "bg-white/10 text-white hover:bg-white/20"} transition-all duration-200 transform hover:scale-105`}
+                  className={`px-3 py-2 text-sm rounded-xl flex flex-col items-center justify-center ${language === "fr-FR" ? "bg-primary text-white ring ring-white/30 dark:bg-blue-800 dark:ring-white/20" : "bg-white/10 text-white hover:bg-white/20 dark:bg-slate-800 dark:hover:bg-slate-700"} transition-all duration-200 transform hover:scale-105`}
                 >
                   <span className="text-lg mb-1">🇫🇷</span>
                   <span>French</span>
@@ -536,7 +576,7 @@ export default function App() {
             <div className="flex items-center gap-4">
               <button 
                 onClick={toggleListening}
-                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg group`}
+                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg group dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white`}
                 disabled={!isSpeechSupported}
               >
                 <VoiceIcon size={22} isListening={isListening} />
@@ -756,7 +796,7 @@ export default function App() {
             <div className="bg-white p-6 rounded-2xl shadow-md transition-transform duration-300 hover:scale-105 flex items-center justify-center border border-opacity-5 hover:border-opacity-10 border-primary">
               <button 
                 onClick={toggleListening}
-                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-3 px-6 rounded-full flex items-center justify-center transition-all duration-300 group`}
+                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-3 px-6 rounded-full flex items-center justify-center transition-all duration-300 group dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white`}
                 disabled={!isSpeechSupported}
               >
                 <VoiceIcon size={20} isListening={isListening} />

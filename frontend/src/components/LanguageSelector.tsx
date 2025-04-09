@@ -53,6 +53,10 @@ export function LanguageSelector({
           value={currentLanguage}
           onChange={(e) => onLanguageChange(e.target.value)}
           className="appearance-none rounded-md bg-white/80 dark:bg-gray-800/80 border border-amber-100 dark:border-amber-800/50 py-1.5 pl-2 pr-8 text-sm text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-sm backdrop-blur-sm transition-all duration-300 group-hover:border-primary/50"
+          style={{
+            backgroundColor: 'var(--background)',
+            color: 'var(--foreground)'
+          }}
         >
           {languages.map((lang) => (
             <option key={lang.code} value={lang.code} className="py-1">
