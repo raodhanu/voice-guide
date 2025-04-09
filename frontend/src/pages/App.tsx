@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, FormEvent } from "react";
 import { VoiceIcon } from "components/VoiceIcon";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { FeatureCard } from "components/FeatureCard";
@@ -67,6 +67,10 @@ export default function App() {
   const [transcript, setTranscript] = useState("");
   const [finalTranscript, setFinalTranscript] = useState("");
   const [isSpeechSupported, setIsSpeechSupported] = useState(true);
+  
+  // Text input mode
+  const [isTypingMode, setIsTypingMode] = useState(false);
+  const [textInput, setTextInput] = useState("");
   
   // AI response state
   const [aiResponse, setAiResponse] = useState("");
@@ -541,7 +545,7 @@ export default function App() {
         {/* Decorative background with Arabic-inspired patterns */}
         <div className="absolute inset-0 arabic-pattern opacity-20"></div>
         <div className="container mx-auto max-w-5xl">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-8 relative z-10">
+          <div className="flex flex-col sm:flex-row justify-between items-center mb-8 relative z-10">
             {/* Arabic-inspired decorative corner element */}
             <div className="absolute top-0 right-0 w-32 h-32 pointer-events-none">
               <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" className="opacity-10">
@@ -573,47 +577,125 @@ export default function App() {
               </p>
             </div>
             
-            <div className="flex items-center gap-4">
+            <div className="flex flex-wrap items-center gap-3 mt-4 sm:mt-0 w-full sm:w-auto justify-center sm:justify-end">
+              {/* Toggle between voice and typing */}
               <button 
-                onClick={toggleListening}
-                className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg group dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white`}
-                disabled={!isSpeechSupported}
+                onClick={() => setIsTypingMode(prev => !prev)}
+                className="px-4 py-2 rounded-lg bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/40 dark:hover:bg-amber-800/60 text-amber-800 dark:text-amber-100 flex items-center justify-center transition-all duration-300"
+                title={isTypingMode ? "Switch to voice input" : "Switch to text input"}
               >
-                <VoiceIcon size={22} isListening={isListening} />
-                <span className="ml-2 group-hover:ml-3 transition-all duration-300">
-                  {isListening ? 
-                    (language === "ar-AE" ? "إيقاف الاستماع" : 
-                     language === "zh-CN" ? "停止聆听" : 
-                     language === "ru-RU" ? "Остановить" : 
-                     language === "en-US" ? "Stop" :
-                     language === "hi-IN" ? "रोकें" :
-                     language === "es-ES" ? "Detener" :
-                     language === "de-DE" ? "Stoppen" :
-                     language === "fr-FR" ? "Arrêter" : "Stop") : 
-                    (language === "ar-AE" ? "ابدأ التحدث" : 
-                     language === "zh-CN" ? "开始说话" : 
-                     language === "ru-RU" ? "Начать" : 
-                     language === "en-US" ? "Speak" :
-                     language === "hi-IN" ? "बोलें" :
-                     language === "es-ES" ? "Hablar" :
-                     language === "de-DE" ? "Sprechen" :
-                     language === "fr-FR" ? "Parler" : "Speak")}
-                </span>
+                {isTypingMode ? (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                      <path d="M12 15.5C14.21 15.5 16 13.71 16 11.5V6C16 3.79 14.21 2 12 2C9.79 2 8 3.79 8 6V11.5C8 13.71 9.79 15.5 12 15.5Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M4.34961 9.65039V11.3504C4.34961 15.5704 7.77961 19.0004 11.9996 19.0004C16.2196 19.0004 19.6496 15.5704 19.6496 11.3504V9.65039" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Voice</span>
+                  </>
+                ) : (
+                  <>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="mr-2">
+                      <path d="M3 5h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3 12h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M3 19h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                    <span>Type</span>
+                  </>
+                )}
               </button>
+              {!isTypingMode ? (
+                <button 
+                  onClick={toggleListening}
+                  className={`${isListening ? "bg-red-600 hover:bg-red-700" : "bg-primary hover:bg-primary/90"} text-white font-medium py-3 px-6 rounded-xl flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg group dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white`}
+                  disabled={!isSpeechSupported}
+                >
+                  <VoiceIcon size={22} isListening={isListening} />
+                  <span className="ml-2 group-hover:ml-3 transition-all duration-300">
+                    {isListening ? 
+                      (language === "ar-AE" ? "إيقاف الاستماع" : 
+                       language === "zh-CN" ? "停止聆听" : 
+                       language === "ru-RU" ? "Остановить" : 
+                       language === "en-US" ? "Stop" :
+                       language === "hi-IN" ? "रोकें" :
+                       language === "es-ES" ? "Detener" :
+                       language === "de-DE" ? "Stoppen" :
+                       language === "fr-FR" ? "Arrêter" : "Stop") : 
+                      (language === "ar-AE" ? "ابدأ التحدث" : 
+                       language === "zh-CN" ? "开始说话" : 
+                       language === "ru-RU" ? "Начать" : 
+                       language === "en-US" ? "Speak" :
+                       language === "hi-IN" ? "बोलें" :
+                       language === "es-ES" ? "Hablar" :
+                       language === "de-DE" ? "Sprechen" :
+                       language === "fr-FR" ? "Parler" : "Speak")}
+                  </span>
+                </button>
+              ) : (
+                <form 
+                  onSubmit={(e: FormEvent) => {
+                    e.preventDefault();
+                    if (textInput.trim()) {
+                      setFinalTranscript(textInput.trim());
+                      
+                      // Add user message to conversation history
+                      const userEntry: ConversationEntry = {
+                        id: Date.now().toString(),
+                        type: "user",
+                        text: textInput.trim(),
+                        timestamp: new Date(),
+                        language: language
+                      };
+                      
+                      setConversationHistory(prev => [...prev, userEntry]);
+                      
+                      // Process the query
+                      processQuery(textInput.trim(), language);
+                      
+                      // Clear input field
+                      setTextInput("");
+                    }
+                  }}
+                  className="flex w-full max-w-md">
+                  <input 
+                    type="text" 
+                    value={textInput}
+                    onChange={(e) => setTextInput(e.target.value)}
+                    className="w-full bg-white/90 dark:bg-slate-800/90 border border-amber-100 dark:border-amber-800/30 rounded-l-xl py-3 px-4 text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent shadow-md transition-all duration-300"
+                    placeholder={language === "ar-AE" ? "اكتب سؤالك هنا..." :
+                                language === "zh-CN" ? "在这里输入您的问题..." :
+                                language === "ru-RU" ? "Введите ваш вопрос здесь..." :
+                                language === "hi-IN" ? "अपना प्रश्न यहां टाइप करें..." :
+                                language === "es-ES" ? "Escribe tu pregunta aquí..." :
+                                language === "de-DE" ? "Geben Sie Ihre Frage hier ein..." :
+                                language === "fr-FR" ? "Tapez votre question ici..." :
+                                "Type your question here..."}
+                  />
+                  <button 
+                    type="submit" 
+                    className="bg-primary hover:bg-primary/90 text-white font-medium py-3 px-4 rounded-r-xl flex items-center justify-center transition-all duration-300 shadow-md hover:shadow-lg dark:bg-slate-700 dark:hover:bg-slate-600"
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <path d="M22 2L11 13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M22 2L15 22L11 13L2 9L22 2Z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                </form>
+              )}
               
               <LanguageSelector 
                 currentLanguage={language} 
                 onLanguageChange={handleLanguageChange} 
               />
               
-              {/* Clear button next to language selector */}
+              {/* Clear button next to language selector - with responsive styling */}
               {(finalTranscript || aiResponse || conversationHistory.length > 0 || etiquetteInfo || locationData) && (
                 <button 
                   onClick={clearConversation}
-                  className="px-4 py-2 rounded-lg text-white bg-red-500/80 hover:bg-red-600 flex items-center justify-center transition-all duration-300">
+                  className="px-4 py-2 rounded-lg text-white bg-red-500/80 hover:bg-red-600 flex items-center justify-center transition-all duration-300 w-auto">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" xmlns="http://www.w3.org/2000/svg" className="mr-2">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
+                  <span className="whitespace-nowrap">
                   {language === "ar-AE" ? "مسح" :
                    language === "zh-CN" ? "清除" :
                    language === "ru-RU" ? "Очистить" :
@@ -622,6 +704,7 @@ export default function App() {
                    language === "de-DE" ? "Löschen" :
                    language === "fr-FR" ? "Effacer" :
                    "Clear"}
+                  </span>
                 </button>
               )}
             </div>

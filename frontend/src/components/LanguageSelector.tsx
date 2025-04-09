@@ -59,7 +59,7 @@ export function LanguageSelector({
           }}
         >
           {languages.map((lang) => (
-            <option key={lang.code} value={lang.code} className="py-1">
+            <option key={lang.code} value={lang.code} className="py-1 bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200">
               {lang.flag} {lang.name}
             </option>
           ))}

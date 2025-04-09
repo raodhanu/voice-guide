@@ -59,8 +59,21 @@ export class SpeechSynthesizer {
    * @param lang Language code (e.g., 'en-US', 'ar-AE')
    */
   public getVoicesForLanguage(lang: string): SpeechSynthesisVoice[] {
+    // Extract primary language code (e.g., 'en' from 'en-US')
+    const primaryLang = lang.split('-')[0].toLowerCase();
+    
+    // First try exact match
+    const exactMatches = this.getVoices().filter(voice => 
+      voice.lang.toLowerCase() === lang.toLowerCase()
+    );
+    
+    if (exactMatches.length > 0) {
+      return exactMatches;
+    }
+    
+    // Then try matching by primary language code
     return this.getVoices().filter(voice => 
-      voice.lang.toLowerCase().includes(lang.toLowerCase())
+      voice.lang.toLowerCase().startsWith(primaryLang)
     );
   }
   
@@ -69,6 +82,7 @@ export class SpeechSynthesizer {
    * @param lang Language code
    */
   public getDefaultVoiceForLanguage(lang: string): SpeechSynthesisVoice | null {
+    // Try to get exact language match first
     const voices = this.getVoicesForLanguage(lang);
     
     // Try to get a voice with 'default' flag first
@@ -76,7 +90,79 @@ export class SpeechSynthesizer {
     if (defaultVoice) return defaultVoice;
     
     // Otherwise, return the first voice for this language
-    return voices.length > 0 ? voices[0] : null;
+    if (voices.length > 0) {
+      return voices[0];
+    }
+    
+    // Improved fallback logic below when no matching voice is found
+    console.log(`No exact voice match found for ${lang}, trying alternative approaches`);
+    
+    // Step 1: Try more permissive language matching with just primary language code
+    const primaryLang = lang.split('-')[0].toLowerCase();
+    const allVoices = this.getVoices();
+    
+    // Find any voice containing the primary language code
+    const looseMatches = allVoices.filter(voice => 
+      voice.lang.toLowerCase().includes(primaryLang)
+    );
+    
+    if (looseMatches.length > 0) {
+      console.log(`Found ${looseMatches.length} voices with loose match for '${primaryLang}'`);
+      return looseMatches[0];
+    }
+    
+    // Step 2: Try language family/region fallbacks for better voice quality
+    const regionFallbacks: Record<string, string[]> = {
+      'ar': ['ar', 'fa', 'ur', 'en-GB', 'fr-FR', 'en-US'],      // Arabic - try Persian, Urdu, then European voices
+      'zh': ['zh', 'ja', 'ko', 'en-US', 'en-GB'],               // Chinese - try other Asian languages first
+      'ru': ['ru', 'uk', 'pl', 'cs', 'bg', 'de-DE', 'en-GB'],   // Russian - try Slavic languages first
+      'hi': ['hi', 'bn', 'ur', 'en-IN', 'en-GB', 'en-US'],      // Hindi - try Indian/South Asian voices
+      'es': ['es', 'pt', 'it', 'fr', 'en-US', 'en-GB'],         // Spanish - try Romance languages first
+      'de': ['de', 'nl', 'sv', 'da', 'en-GB', 'en-US'],         // German - try Germanic languages first
+      'fr': ['fr', 'it', 'es', 'pt', 'en-GB', 'en-US'],         // French - try Romance languages first
+    };
+    
+    // Try each fallback in order until we find a voice
+    const fallbacks = regionFallbacks[primaryLang] || ['en-US', 'en-GB', 'en'];
+    
+    for (const fallbackLang of fallbacks) {
+      // Try exact fallback first
+      const exactFallbackMatches = allVoices.filter(voice => 
+        voice.lang.toLowerCase() === fallbackLang.toLowerCase()
+      );
+      
+      if (exactFallbackMatches.length > 0) {
+        console.log(`Using '${fallbackLang}' as fallback for '${lang}'`);
+        // Prefer default voice if available
+        const defaultFallback = exactFallbackMatches.find(v => v.default);
+        return defaultFallback || exactFallbackMatches[0];
+      }
+      
+      // Try with just primary language code of fallback
+      const primaryFallback = fallbackLang.split('-')[0].toLowerCase();
+      const looseFallbackMatches = allVoices.filter(voice => 
+        voice.lang.toLowerCase().startsWith(primaryFallback)
+      );
+      
+      if (looseFallbackMatches.length > 0) {
+        console.log(`Using '${primaryFallback}' as loose fallback for '${lang}'`);
+        // Prefer default voice if available
+        const defaultLooseFallback = looseFallbackMatches.find(v => v.default);
+        return defaultLooseFallback || looseFallbackMatches[0];
+      }
+    }
+    
+    // Final fallback - use ANY available voice rather than returning null
+    if (allVoices.length > 0) {
+      console.log(`No specific fallback found for '${lang}', using first available voice`);
+      // Try to find a default voice
+      const anyDefault = allVoices.find(v => v.default);
+      return anyDefault || allVoices[0];
+    }
+    
+    // If we get here, there are no voices available at all
+    console.warn(`No voices available in this browser for any language`);
+    return null;
   }
   
   /**
@@ -97,7 +183,16 @@ export class SpeechSynthesizer {
     if (options.rate !== undefined) this.utterance.rate = options.rate;
     if (options.pitch !== undefined) this.utterance.pitch = options.pitch;
     if (options.volume !== undefined) this.utterance.volume = options.volume;
-    if (options.voice) this.utterance.voice = options.voice;
+    
+    // Only set voice if it's available, as some browsers may throw errors otherwise
+    if (options.voice) {
+      try {
+        this.utterance.voice = options.voice;
+      } catch (error) {
+        console.warn('Error setting voice:', error);
+        // Continue without setting voice - browser will use its default
+      }
+    }
     
     // Set event handlers
     this.utterance.onstart = () => {

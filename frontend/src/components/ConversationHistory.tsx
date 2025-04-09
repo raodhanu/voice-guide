@@ -29,16 +29,9 @@ export function ConversationHistory({
 }: Props) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Auto scroll to bottom of the conversation container only, not the whole page
-  useEffect(() => {
-    // Only scroll the conversation container itself, not the page
-    if (messagesEndRef.current) {
-      const container = messagesEndRef.current.closest('.conversation-scroll');
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    }
-  }, [entries]);
+  // Maintain scroll position at the top when entries are added
+  // We don't auto-scroll since entries are shown in reverse order (newest first)
+  // and we want to keep the view stable when new messages are added
 
   // Get language-specific labels
   const getConversationHistoryLabel = () => {
@@ -99,80 +92,97 @@ export function ConversationHistory({
     return processedText;
   };
 
-  // Handle downloading conversation history
+  // Handle downloading conversation history with direct jsPDF implementation
   const handleDownloadConversation = (format: 'pdf' | 'txt') => {
     if (format === "pdf") {
       try {
-        // Create a new PDF document with jsPDF directly
+        // Create a new PDF document with jsPDF
         const doc = new jsPDF();
         
-        // Add a title
+        // Add title
         const title = getConversationHistoryLabel();
         doc.setFontSize(18);
-        doc.setTextColor(79, 70, 229); // indigo color
+        doc.setTextColor(79, 70, 229); // Indigo color
         doc.text(title, doc.internal.pageSize.width / 2, 20, { align: 'center' });
         
-        // Settings for text
-        doc.setFontSize(12);
-        doc.setTextColor(0, 0, 0);
-        
-        let yPosition = 40; // Start position after title
+        // Set up variables for page layout
+        let yPosition = 40; // Starting position after title
         const pageWidth = doc.internal.pageSize.width;
         const margin = 20;
         const textWidth = pageWidth - 2 * margin;
         
-        // Loop through each conversation entry
-        entries.forEach((entry, index) => {
+        // Loop through conversations in chronological order
+        [...entries].forEach((entry, index) => {
           // Check if we need a new page
           if (yPosition > 260) {
             doc.addPage();
             yPosition = 20;
           }
           
-          // Set color based on entry type
-          const textColor = entry.type === "user" ? [217, 119, 6] : [13, 148, 136];
-          
-          // Add sender (You or VoiceGuide)
-          doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+          // Set color based on sender
+          const senderColor = entry.type === "user" ? [217, 119, 6] : [13, 148, 136];
+          doc.setTextColor(senderColor[0], senderColor[1], senderColor[2]);
           doc.setFontSize(12);
-          doc.text(
-            entry.type === "user" ? (language === "ar-AE" ? "أنت" : "You") : "VoiceGuide", 
-            margin, 
-            yPosition
-          );
+          
+          // Add sender name
+          const senderText = entry.type === "user" ? 
+                          (entry.language === "ar-AE" ? "أنت" : "You") : 
+                          "VoiceGuide";
+          doc.text(senderText, margin, yPosition);
           yPosition += 8;
           
-          // Add message text with word wrap
+          // Add language indicator if different from UI language
+          if (entry.language && entry.language !== language) {
+            doc.setFontSize(9);
+            doc.setTextColor(100, 100, 100);
+            
+            const langName = entry.language === "en-US" ? "English" : 
+                           entry.language === "ar-AE" ? "Arabic" : 
+                           entry.language === "zh-CN" ? "Chinese" : 
+                           entry.language === "ru-RU" ? "Russian" : 
+                           entry.language === "hi-IN" ? "Hindi" : 
+                           entry.language === "es-ES" ? "Spanish" : 
+                           entry.language === "de-DE" ? "German" : 
+                           entry.language === "fr-FR" ? "French" : 
+                           entry.language.split('-')[0].toUpperCase();
+            
+            doc.text(`(${langName})`, margin, yPosition);
+            yPosition += 6;
+          }
+          
+          // Process and add message text
           doc.setTextColor(60, 60, 60);
           doc.setFontSize(10);
           
-          // Process markdown to plain text for PDF
-          const processedText = processMarkdownText(entry.text);
+          // Convert markdown to plain text
+          const plainText = processMarkdownText(entry.text);
           
-          // Split text into multiple lines to fit page width
-          const textLines = doc.splitTextToSize(processedText, textWidth);
+          // Split text into lines to fit page width
+          const textLines = doc.splitTextToSize(plainText, textWidth);
+          
+          // Add each line of text
           textLines.forEach(line => {
             doc.text(line, margin, yPosition);
             yPosition += 6;
           });
           
           // Add timestamp
-          doc.setTextColor(107, 114, 128); // Gray color
+          doc.setTextColor(107, 114, 128);
           doc.setFontSize(8);
           const timestamp = formatTime(entry.timestamp);
           doc.text(timestamp, pageWidth - margin, yPosition, { align: 'right' });
           
-          // Add space between entries
+          // Add space between messages
           yPosition += 15;
           
-          // Add a subtle separator line if not the last entry
+          // Add separator line if not the last entry
           if (index < entries.length - 1) {
-            doc.setDrawColor(229, 231, 235); // Light gray
+            doc.setDrawColor(229, 231, 235);
             doc.line(margin, yPosition - 8, pageWidth - margin, yPosition - 8);
           }
         });
         
-        // Save the PDF
+        // Save the PDF file
         doc.save("VoiceGuide-Conversation.pdf");
       } catch (error) {
         console.error("PDF generation error:", error);
@@ -196,6 +206,11 @@ export function ConversationHistory({
     
     // Hide dropdown after selection
     setShowDropdown(false);
+  };
+  
+  // Check if all conversation entries are in English
+  const isAllEnglish = () => {
+    return entries.every(entry => entry.language === "en-US");
   };
   
   // Toggle dropdown visibility
@@ -299,20 +314,23 @@ export function ConversationHistory({
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="py-1 dark:bg-gray-800" role="menu" aria-orientation="vertical">
-                    <button
-                      onClick={() => handleDownloadConversation('pdf')}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 w-full text-left"
-                      role="menuitem"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M21 7V17C21 18.1 20.1 19 19 19H5C3.9 19 3 18.1 3 17V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M19 7C18.45 7 18 6.55 18 6V3C18 2.45 18.45 2 19 2C19.55 2 20 2.45 20 3V6C20 6.55 19.55 7 19 7Z" fill="currentColor"/>
-                        <path d="M5 7C4.45 7 4 6.55 4 6V3C4 2.45 4.45 2 5 2C5.55 2 6 2.45 6 3V6C6 6.55 5.55 7 5 7Z" fill="currentColor"/>
-                        <path d="M8 12H16" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
-                        <path d="M8 16H12" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
-                      </svg>
-                      PDF
-                    </button>
+                    {/* Only show PDF option if all messages are in English */}
+                    {isAllEnglish() && (
+                      <button
+                        onClick={() => handleDownloadConversation('pdf')}
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 w-full text-left"
+                        role="menuitem"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M21 7V17C21 18.1 20.1 19 19 19H5C3.9 19 3 18.1 3 17V7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M19 7C18.45 7 18 6.55 18 6V3C18 2.45 18.45 2 19 2C19.55 2 20 2.45 20 3V6C20 6.55 19.55 7 19 7Z" fill="currentColor"/>
+                          <path d="M5 7C4.45 7 4 6.55 4 6V3C4 2.45 4.45 2 5 2C5.55 2 6 2.45 6 3V6C6 6.55 5.55 7 5 7Z" fill="currentColor"/>
+                          <path d="M8 12H16" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+                          <path d="M8 16H12" stroke="currentColor" strokeWidth="1.5" strokeMiterlimit="10" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        PDF
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDownloadConversation('txt')}
                       className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-900 dark:hover:text-gray-100 w-full text-left"
@@ -365,7 +383,7 @@ export function ConversationHistory({
                       ></div>
                       
                       {/* Message content */}
-                      <div className="prose prose-sm max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5">
+                      <div className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1.5 prose-headings:my-2 prose-ul:my-1.5 prose-li:my-0.5">
                         {/* Language indicator when different from UI language */}
                         {entry.language && entry.language !== language && (
                           <div className="flex items-center mb-2 py-1 px-2 rounded-lg bg-gray-100/60 dark:bg-gray-800/60 w-fit">
