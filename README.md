@@ -1,7 +1,5 @@
 # VoiceGuide: Your Multilingual Voice-Activated Guide to Dubai
 
-**[Banner Image: Dubai skyline with VoiceGuide logo overlay]**
-
 ## Project Overview
 
 **VoiceGuide** is an intelligent multilingual tourism companion designed to help international visitors navigate Dubai with ease. Using advanced AI technology and voice recognition, VoiceGuide bridges language barriers and provides real-time assistance for tourists regardless of their native language.
