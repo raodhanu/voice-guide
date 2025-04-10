@@ -116,44 +116,10 @@ Follow these steps to set up and run the VoiceGuide application on your local ma
 3. Visual Studio Code with Python and JavaScript/TypeScript extensions
 
 ### Backend Setup
-1. Open a terminal in VS Code and navigate to the project root
-2. Create a Python virtual environment:
-   ```
-   python -m venv venv
-   ```
-3. Activate the virtual environment:
-   - Windows: `venv\Scripts\activate`
-   - Mac/Linux: `source venv/bin/activate`
-4. Install the backend dependencies:
-   ```
-   pip install -r backend/requirements.txt
-   ```
-5. Create a `.env` file in the root directory with your API keys:
-   ```
-   OPENAI_API_KEY=your_openai_api_key
-   GOOGLE_MAPS_API_KEY=your_google_maps_api_key
-   ```
-6. Run the backend server:
-   ```
-   cd backend
-   uvicorn main:app --reload --port 8000
-   ```
+Check the README.md [backend\README.md] 
 
 ### Frontend Setup
-1. Open a new terminal (keep the backend running)
-2. Navigate to the frontend directory:
-   ```
-   cd frontend
-   ```
-3. Install frontend dependencies:
-   ```
-   npm install
-   ```
-4. Start the development server:
-   ```
-   npm run dev
-   ```
-5. The application should now be running at http://localhost:5173/
+Check the README.md [frontend\README.md] 
 
 ### Notes
 - For the Google Maps functionality to work properly, ensure your API key has the appropriate permissions
