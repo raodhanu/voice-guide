@@ -38,7 +38,6 @@ This project was developed as part of the **Future Tech Challenge: Building AI A
 ## 🖼️ Key Interface Descriptions
 
 ### Main Interface
-**[Image Description: Main VoiceGuide Interface]**
 
 The main interface features a clean, elegant design with:
 - A central microphone button for voice input
@@ -47,7 +46,6 @@ The main interface features a clean, elegant design with:
 - Arabic-inspired design elements with a Dubai skyline background
 
 ### Cultural Etiquette Guidance
-**[Image Description: Cultural Guidance Panel]**
 
 The cultural guidance panel provides:
 - Category-specific etiquette information (e.g., dress code, greetings)
@@ -56,7 +54,6 @@ The cultural guidance panel provides:
 - Cultural context explanations with Arabic-inspired visual elements
 
 ### Location Services
-**[Image Description: Interactive Map Interface]**
 
 The location services feature includes:
 - Interactive Google Maps integration showing Dubai landmarks
@@ -116,10 +113,12 @@ Follow these steps to set up and run the VoiceGuide application on your local ma
 3. Visual Studio Code with Python and JavaScript/TypeScript extensions
 
 ### Backend Setup
-Check the README.md [backend\README.md] 
+
+- **Check the README.md**:  backend\README.md
 
 ### Frontend Setup
-Check the README.md [frontend\README.md] 
+
+- **Check the README.md**: frontend\README.md
 
 ### Notes
 - For the Google Maps functionality to work properly, ensure your API key has the appropriate permissions
